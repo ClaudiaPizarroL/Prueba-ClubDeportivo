@@ -1,0 +1,5 @@
+[
+  { "nombre": "volley", "precio": 15000 },
+  { "nombre": "rugby", "precio": 30000 },
+  { "nombre": "tenis", "precio": 15000 }
+]
