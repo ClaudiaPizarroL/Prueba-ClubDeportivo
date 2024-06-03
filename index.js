@@ -17,26 +17,23 @@ app.get("/agregar", (req, res) => {
   const { nombre, precio } = req.query;
 
   if (!nombre || !precio || isNaN(parseFloat(precio))) {
-    return res.status(400).json({
-      error: "Debes ingresar un nombre y precio válidos para el deporte",
-    });
-  }
+    console.log("Faltan parámetros, se requiere nombre y precio");
+    return res.send("Error. Debes ingresar un nombre y precio válido para el deporte");
+    } 
 
   const deportes = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
 
   //verifica que no se repita el nombre del deporte
   if (deportes.find((deporte) => deporte.nombre === nombre)) {
-    return res.status(400).json({
-      error: "Deporte con ese nombre ya existe",
-    });
+    return res.send("Deporte con ese nombre ya existe");
   }
 
   const nuevoDeporte = { nombre, precio: parseFloat(precio) };
   deportes.push(nuevoDeporte);
 
   fs.writeFileSync("deportes.json", JSON.stringify(deportes));
-
-  res.json(nuevoDeporte);
+console.log("Nuevo Deporte objeto: ", nuevoDeporte);
+  console.log("Arreglo Deportes: ", deportes);
 });
 
 // ruta que al consultarse devuelva en formato JSON todos los deportes registrados
@@ -68,23 +65,54 @@ app.get("/editar", (req, res) => {
 
   fs.writeFileSync("deportes.json", JSON.stringify(deportes));
 
-  res.json({ mensaje: `El precio de ${nombre} se actualizó a ${precio}` });
+ return res.send(`El precio se actualizó correctamente` );
 });
 
 // Ruta para eliminar un deporte
-app.delete("/eliminar/:nombre", (req, res) => {
+
+app.get("/eliminar/:nombre", (req, res) => {
   const nombre = req.params.nombre;
 
+  console.log(`Solicitud para eliminar: ${nombre}`);
+
   if (!nombre) {
+    console.log("Nombre no proporcionado");
     return res.status(400).json({
       error: "Ingresa el nombre del deporte a eliminar",
     });
   }
 
-  const deportes = JSON.parse(fs.readFileSync("deportes.json", "utf8"));
+  let deportes;
+  try {
+    if (!fs.existsSync("deportes.json")) {
+      console.log("Archivo deportes.json no existe");
+      return res.status(404).json({
+        error: "El archivo deportes.json no existe",
+      });
+    }
+
+    const data = fs.readFileSync("deportes.json", "utf8");
+    deportes = JSON.parse(data);
+
+    if (!Array.isArray(deportes)) {
+      console.log("El contenido de deportes.json no es un array");
+      return res.status(500).json({
+        error: "El archivo deportes.json no contiene un array válido",
+      });
+    }
+  } catch (error) {
+    console.log("Error al leer deportes.json", error);
+    return res.status(500).json({
+      error: "Error al leer el archivo deportes.json",
+      details: error.message,
+    });
+  }
+
   const index = deportes.findIndex((deporte) => deporte.nombre === nombre);
+  console.log(`Índice encontrado: ${index}`);
 
   if (index === -1) {
+    console.log(`Deporte '${nombre}' no encontrado`);
     return res.status(404).json({
       error: `'${nombre}' no se encontró en la lista`,
     });
@@ -92,10 +120,18 @@ app.delete("/eliminar/:nombre", (req, res) => {
 
   deportes.splice(index, 1);
 
-  fs.writeFileSync("deportes.json", JSON.stringify(deportes));
+  try {
+    fs.writeFileSync("deportes.json", JSON.stringify(deportes, null, 2), "utf8");
+    console.log(`Deporte '${nombre}' eliminado correctamente`);
+  } catch (error) {
+    console.log("Error al escribir deportes.json", error);
+    return res.status(500).json({
+      error: "Error al escribir en el archivo deportes.json",
+      details: error.message,
+    });
+  }
 
-  res.json({ mensaje: `'${nombre}' se eliminó correctamente` });
+  return res.send(`El deporte se eliminó correctamente` );
 });
-
 
 
